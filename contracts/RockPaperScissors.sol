@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.6.12;
 
+// Every move follows the 'Commit-Reveal' pattern
+// - The commit phase during which a value is chosen and specified -> hash the move
+// - The reveal phase during which the value is revealed and checked -> players will reveal the move
+
 contract RockPaperScissors {
     enum State {CREATED, JOINED, COMMITED, REVEALED}
     struct Game {
         uint256 id;
-        uint256 bet;
+        uint256 bet; // value of the bet per participant
         address payable[2] players;
         State state;
     }
@@ -15,7 +19,17 @@ contract RockPaperScissors {
     }
     mapping(uint256 => Game) public games;
     mapping(uint256 => mapping(address => Move)) public moves; // game id -> player addr -> move
+    mapping(uint => uint) public winningMoves;
     uint256 public gameId;
+
+    constructor () public {
+        // 1. Rock
+        // 2. Paper
+        // 3. Scissors
+        winningMoves[1] = 3;
+        winningMoves[2] = 1;
+        winningMoves[3] = 2;
+    }
 
     function createGame(address payable participant) external payable {
         require(msg.value > 0, "need to send some ether");
@@ -42,16 +56,16 @@ contract RockPaperScissors {
         uint256 _gameId,
         uint256 moveId,
         uint256 salt
-    ) external {
+    ) external isCommited(_gameId) {
         Game storage game = games[_gameId];
-        require(game.state == State.JOINED, "game must be in JOIN state");
+        require(game.state == State.JOINED, "game must be in JOINED state");
         require(
             game.players[0] == msg.sender || game.players[1] == msg.sender,
-            "can only be called by 1 of the players"
+            "can only be called by one of the players"
         );
         require(moves[_gameId][msg.sender].hash != 0, "move already made");
         require(
-            moveId == 1 || moveId == 3 || moveId == 3,
+            moveId == 1 || moveId == 2 || moveId == 3,
             "move must be either 1, 2 or 3"
         );
         moves[_gameId][msg.sender] = Move(
@@ -64,5 +78,44 @@ contract RockPaperScissors {
         ) {
             game.state = State.COMMITED;
         }
+    }
+
+    function revealMove(
+        uint256 _gameId,
+        uint256 moveId,
+        uint256 salt
+    ) external isCommited(_gameId) {
+        Game storage game = games[gameId];
+        Move storage move1 = moves[_gameId][game.players[0]];
+        Move storage move2 = moves[_gameId][game.players[1]];
+        // We need to know which player launched the tx
+        Move storage moveSender = moves[_gameId][msg.sender];
+        require(game.state == State.COMMITED, "game must be in COMMITED state");
+        require(
+            moveSender.hash == keccak256(abi.encodePacked(moveId, salt)),
+            "moveId does not match commitment"
+        );
+        moveSender.value = moveId;
+        if (move1.value != 0 && move2.value != 0) {
+            if (move1.value == move2.value) {
+                game.players[0].transfer(game.bet);
+                game.players[1].transfer(game.bet);
+                game.state = State.REVEALED;
+                return;
+            }
+            address payable winner;
+            winner = (winningMoves[move1.value] == move2.value) ? game.players[0] : game.players[1];
+            winner.transfer(2 * game.bet);
+            game.state = State.REVEALED;
+        }
+    }
+
+    modifier isCommited(uint256 _gameId) {
+        require(
+            games[_gameId].players[0] == msg.sender ||
+                games[_gameId].players[1] == msg.sender,
+            "can only be called by 1 of the players"
+        );
+        _;
     }
 }
