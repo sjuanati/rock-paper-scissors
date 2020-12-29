@@ -25,84 +25,84 @@ contract('RockPaperScissors', (accounts) => {
         assert(games.state.toNumber() === 0)
     });
 
-      it('Should NOT join game if not second player', async () => {
+    it('Should NOT join game if not second player', async () => {
         await contract.createGame(player2, { from: player1, value: 100 });
         await expectRevert(
-            contract.joinGame(0, {from: player1, value: 200}),
+            contract.joinGame(0, { from: player1, value: 200 }),
             'sender must be second player'
         );
-      });
+    });
 
-      it('Should NOT join game if not enough ether sent', async () => {
+    it('Should NOT join game if not enough ether sent', async () => {
         await contract.createGame(player2, { from: player1, value: 100 });
         await expectRevert(
-            contract.joinGame(0, {from: player2, value: 50}),
+            contract.joinGame(0, { from: player2, value: 50 }),
             'not enough ether send'
         );
-      });
+    });
 
-      it('Should NOT join game if not in CREATED state', async () => {
+    it('Should NOT join game if not in CREATED state', async () => {
         await contract.createGame(player2, { from: player1, value: 100 });
-        await contract.joinGame(0, {from: player2, value: 100});
-        await contract.commitMove(0, rock, salt1, {from: player1});
-        await contract.commitMove(0, paper, salt2, {from: player2});
+        await contract.joinGame(0, { from: player2, value: 100 });
+        await contract.commitMove(0, rock, salt1, { from: player1 });
+        await contract.commitMove(0, paper, salt2, { from: player2 });
         await expectRevert(
-            contract.joinGame(0, {from: player2, value: 200}),
+            contract.joinGame(0, { from: player2, value: 200 }),
             'must be in CREATED state'
         );
-      });
+    });
 
-      it('Should NOT commit move if game not in JOINED state', async () => {
+    it('Should NOT commit move if game not in JOINED state', async () => {
         await contract.createGame(player2, { from: player1, value: 100 });
         await expectRevert(
-            contract.commitMove(0, rock, salt1, {from: player1}),
+            contract.commitMove(0, rock, salt1, { from: player1 }),
             'game must be in JOINED state'
         );
-      });
+    });
 
-      it('Should NOT commit move if not called by player', async () => {
+    it('Should NOT commit move if not called by player', async () => {
         await contract.createGame(player2, { from: player1, value: 100 });
-        await contract.joinGame(0, {from: player2, value: 100});
+        await contract.joinGame(0, { from: player2, value: 100 });
         await expectRevert(
-            contract.commitMove(0, rock, salt1, {from: accounts[4]}),
+            contract.commitMove(0, rock, salt1, { from: accounts[4] }),
             'can only be called by 1 of the players'
         );
-      });
+    });
 
-      it('Should NOT commit move if move already made', async () => {
+    it('Should NOT commit move if move already made', async () => {
         await contract.createGame(player2, { from: player1, value: 100 });
-        await contract.joinGame(0, {from: player2, value: 100});
-        await contract.commitMove(0, rock, salt1, {from: player1});
+        await contract.joinGame(0, { from: player2, value: 100 });
+        await contract.commitMove(0, rock, salt1, { from: player1 });
         await expectRevert(
-            contract.commitMove(0, paper, salt1, {from: player1}),
+            contract.commitMove(0, paper, salt1, { from: player1 }),
             'move already made'
         );
-      });
+    });
 
-      it('Should NOT commit move if non-existing move', async () => {
+    it('Should NOT commit move if non-existing move', async () => {
         await contract.createGame(player2, { from: player1, value: 100 });
-        await contract.joinGame(0, {from: player2, value: 100});
+        await contract.joinGame(0, { from: player2, value: 100 });
         await expectRevert(
-            contract.commitMove(0, 5, salt1, {from: player1}),
+            contract.commitMove(0, 5, salt1, { from: player1 }),
             'move must be either 1, 2 or 3'
         );
-      });
+    });
 
-      it('Should NOT reveal move if not in state COMMITED', async () => {
+    it('Should NOT reveal move if not in state COMMITED', async () => {
         await contract.createGame(player2, { from: player1, value: 100 });
-        await contract.joinGame(0, {from: player2, value: 100});
-        await contract.commitMove(0, rock, salt1, {from: player1});
+        await contract.joinGame(0, { from: player2, value: 100 });
+        await contract.commitMove(0, rock, salt1, { from: player1 });
         await expectRevert(
-            contract.revealMove(0, rock, salt1, {from: player1}),
+            contract.revealMove(0, rock, salt1, { from: player1 }),
             'game must be in COMMITED state'
         );
-      });
+    });
 
-      it.only('Should NOT reveal move if moveId does not match commitment', async () => {
+    it('Should NOT reveal move if moveId does not match commitment', async () => {
         await contract.createGame(player2, { from: player1, value: 100 });
-        await contract.joinGame(0, {from: player2, value: 100});
-        await contract.commitMove(0, rock, salt1, {from: player1});
-        await contract.commitMove(0, scissors, salt2, {from: player2});
+        await contract.joinGame(0, { from: player2, value: 100 });
+        await contract.commitMove(0, rock, salt1, { from: player1 });
+        await contract.commitMove(0, scissors, salt2, { from: player2 });
         // const move_player1 = await contract.moves(0, player1);
         // const move_player2 = await contract.moves(0, player2);
         // console.log('move player1:', move_player1.value.toNumber());
@@ -112,16 +112,48 @@ contract('RockPaperScissors', (accounts) => {
         // const game_state = await contract.games(0);
         // console.log('game state:', game_state.state.toNumber());
         await expectRevert(
-            contract.revealMove(0, paper, salt1, {from: player1}),
+            contract.revealMove(0, paper, salt1, { from: player1 }),
             'moveId does not match commitment'
         );
         await expectRevert(
-            contract.revealMove(0, rock, salt2, {from: player1}),
+            contract.revealMove(0, rock, salt2, { from: player1 }),
             'moveId does not match commitment'
         );
-      });
+    });
 
-    //   it('Full game', async () => {
-    //   });
+    it('Full game', async () => {
+        const oneEther = web3.utils.toBN(web3.utils.toWei('1', 'ether'));
+
+        await contract.createGame(player2, { from: player1, value: oneEther });
+        await contract.joinGame(0, { from: player2, value: oneEther });
+        await contract.commitMove(0, rock, salt1, { from: player1 });
+        await contract.commitMove(0, paper, salt2, { from: player2 });
+
+        const balanceP1Before = web3.utils.toBN(
+            await web3.eth.getBalance(player1)
+        );
+        const balanceP2Before = web3.utils.toBN(
+            await web3.eth.getBalance(player2)
+        );
+
+        const tx = await contract.revealMove(0, paper, salt2, { from: player2, gasPrice: 1 });
+        const game = await contract.games(0);
+
+        const balanceP1After = web3.utils.toBN(
+            await web3.eth.getBalance(player1)
+        );
+        const balanceP2After = web3.utils.toBN(
+            await web3.eth.getBalance(player2)
+        );
+
+        assert(balanceP1After.sub(balanceP1Before).isZero());
+        assert(
+          balanceP2After
+            .add(web3.utils.toBN(tx.receipt.gasUsed))
+            .sub(balanceP2Before)
+            .eq(oneEther.add(oneEther))
+        );
+        assert(game.state.toNumber() === 3);
+    });
 
 });
